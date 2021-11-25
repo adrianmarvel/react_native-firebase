@@ -1,96 +1,54 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import { render } from 'react-dom';
 import { StyleSheet, Text, View, SafeAreaView, ScrollView, Modal, Pressable, TextInput, Button } from 'react-native';
 import { FAB } from 'react-native-paper';
+import { db } from './firebase';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 
-class App extends Component{
-
-  state = {
-    modalVisible: false
-  };
-
-  setModalVisible = (visible) => {
-    this.setState({ modalVisible: visible });
-  }
-  
-    constructor(props){
-      super(props);
-      this.state = {
-        nama:'',
-        alamat:'',
-        nim:'',
-        jurusan:'',
-        telp:'',
-        listData:[],
-        idEdit:null,
-        modalVisible: false
-      };
-      this.url = "http://192.168.1.103/mahasiswa/api/read.php";
-    }
-    componentDidMount(){
-      this.ambilListData();
-    }
-    async ambilListData(){
-      await fetch(this.url)
-      .then((response)=>response.json())
-      .then((json)=>{
-        console.log('Hasil yang didapat: '+JSON.stringify(json.data.result));
-        this.setState({listData:json.data.result});
-      })
-      .catch((error)=>{
-        console.log(error);
-      })
-    }
-    klikSimpan(){
-          if(this.state.nama == '' || this.state.alamat == '' || this.state.nim == '' || this.state.jurusan == '' || this.state.telp == ''){
-            alert('Silakan masukkan nama dan alamat');
-          }else{
-              var urlAksi = "http://192.168.1.103/mahasiswa/api/create.php";              
-
-              fetch(urlAksi,{
-                  method:'post',
-                  headers:{
-                      'Content-Type':'application/x-www-form-urlencoded'
-                  },
-                  body:"nama="+this.state.nama+"&alamat="+this.state.alamat+"&nim="+this.state.nim+"&jurusan="+this.state.jurusan+"&telp="+this.state.telp
-              })
-              .then((response)=>response.json())
-              .then((json)=>{
-                  this.setState({nama:''});
-                  this.setState({alamat:''});
-                  this.setState({nim:''});
-                  this.setState({jurusan:''});
-                  this.setState({telp:''});
-                  this.ambilListData();
-              })
-          }
-      }
-  
-
-    render(){
-      const { modalVisible } = this.state;
-      var modalBackgroundStyle = {
+function App(){
+  const [namaBaru, setNamaBaru] = useState("");
+  const [nimBaru, setNimBaru] = useState("");
+  const [users, setUsers] = useState([]);
+  const usersCollectionRef = collection(db, "mahasiswa");
+  const [modalVisible, setModalVisible] = useState(false);
+  var modalBackgroundStyle = {
       backgroundColor: 'rgba(0, 0, 0, 0.5)'
     };
-      return(
-        <SafeAreaView style={styles.safeAreaView}>
-          <ScrollView style={styles.scrollView}>
-            <View style={styles.container}>
-              <Text style={styles.font}>Data Mahasiswa</Text>
-              {
-                this.state.listData.map((val,index)=>
-                <View style={[styles.data,{backgroundColor: 'hsl(' + (Math.floor(Math.random() * 360)) + ',80%,90%)'}]} key={index}>
-                  <Text>Nama : {val.nama}</Text>
-                  <Text>Alamat : {val.alamat}</Text>
-                  <Text>NIM : {val.nim}</Text>
-                  <Text>Jurusan : {val.jurusan}</Text>
-                  <Text>No. HP : {val.telp}</Text>
-                </View>)
-              }
+
+  const klikSimpan = async () => {
+    await addDoc(usersCollectionRef, { nama: namaBaru, nim: nimBaru});
+    setModalVisible(false);
+    refreshing: true;
+  };
+
+  useEffect(() => {
+    const getUsers = async () => {
+      const data = await getDocs(usersCollectionRef);
+      setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
+    };
+
+    getUsers();
+  }, []);
+
+  return(
+     <SafeAreaView style={styles.safeAreaView}>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.container}>
+            <Text style={styles.font}>Data Mahasiswa</Text>
+            <View>
+              {users.map((user) => {
+                return(
+                  <View style={[styles.data,{backgroundColor: 'hsl(' + (Math.floor(Math.random() * 360)) + ',80%,90%)'}]}>
+                    <Text>{user.nama}</Text>
+                    <Text>{user.nim}</Text>
+                    </View>
+                );
+              })}
             </View>
-          </ScrollView>
-          <View style={styles.centeredView}>
+          </View>
+        </ScrollView>
+        <View style={styles.centeredView}>
             <Modal
             animationType="fade"
             transparent={true}
@@ -105,45 +63,24 @@ class App extends Component{
                 <Text style={styles.titleModal}>Masukan data mahasiswa</Text>
                   <TextInput
                     style={styles.input}
-                    value={this.state.nama}
-                    onChangeText={(text)=>this.setState({nama:text})}
                     placeholder="Nama"
+                    onChangeText={setNamaBaru}
                   />
                   <TextInput
                     style={styles.input}
-                    value={this.state.alamat}
-                    onChangeText={(text)=>this.setState({alamat:text})}
-                    placeholder="Alamat"
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={this.state.nim}
-                    onChangeText={(text)=>this.setState({nim:text})}
                     placeholder="NIM"
                     keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={this.state.jurusan}
-                    onChangeText={(text)=>this.setState({jurusan:text})}
-                    placeholder="Jurusan"
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={this.state.telp}
-                    onChangeText={(text)=>this.setState({telp:text})}
-                    placeholder="No. HP"
-                    keyboardType="numeric"
+                    onChangeText={setNimBaru}
                   />
                   <View style={styles.fixToText}>
                     <Button
                       title="Batal"
                       color="red"
-                      onPress={() => this.setModalVisible(false)}
+                      onPress={() => setModalVisible(false)}
                     />
                     <Button
                       title="Simpan"
-                      onPress={() => this.klikSimpan()}
+                      onPress={klikSimpan}
                     />
                   </View>
                 </View>
@@ -151,21 +88,20 @@ class App extends Component{
             </Modal>
           </View>
           <View>
-            <FAB
-              style={styles.fab}
-              medium
-              icon="plus"
-              color="white"
-              onPress={() => this.setModalVisible(true)}
-            />
-          </View>
-        </SafeAreaView>
-      )
-    }
-  }
-  
+              <FAB
+                style={styles.fab}
+                medium
+                icon="plus"
+                color="white"
+                onPress={() =>  setModalVisible(true)}
+              />
+            </View>
+      </SafeAreaView>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+   container: {
     marginTop: 10
   },
   safeAreaView: {
@@ -227,7 +163,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-});
+  })
 
 export default App;
 
