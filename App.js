@@ -1,25 +1,36 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { Component, useEffect, useState } from 'react';
 import { render } from 'react-dom';
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, Modal, Pressable, TextInput, Button } from 'react-native';
+import { Alert, TouchableOpacity, StyleSheet, Text, View, SafeAreaView, ScrollView, Modal, Pressable, TextInput, Button, RefreshControl, Image } from 'react-native';
 import { FAB } from 'react-native-paper';
 import { db } from './firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+
+const wait = (timeout) => {
+  return new Promise(resolve => setTimeout(resolve, timeout));
+}
 
 function App(){
   const [namaBaru, setNamaBaru] = useState("");
   const [nimBaru, setNimBaru] = useState("");
   const [users, setUsers] = useState([]);
+  const [refreshing, setRefreshing] = React.useState(false);
   const usersCollectionRef = collection(db, "mahasiswa");
   const [modalVisible, setModalVisible] = useState(false);
   var modalBackgroundStyle = {
-      backgroundColor: 'rgba(0, 0, 0, 0.5)'
-    };
+    backgroundColor: 'rgba(0, 0, 0, 0.5)'
+  };
 
   const klikSimpan = async () => {
     await addDoc(usersCollectionRef, { nama: namaBaru, nim: nimBaru});
     setModalVisible(false);
-    refreshing: true;
+    const data = await getDocs(usersCollectionRef);
+    setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
+  };
+
+  const deleteUser = async (id) => {
+    const userDoc = doc(db, "mahasiswa", id);
+    await deleteDoc(userDoc);
   };
 
   useEffect(() => {
@@ -31,18 +42,40 @@ function App(){
     getUsers();
   }, []);
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    wait(2000).then(() => setRefreshing(false));
+  }, []);
+
+
   return(
      <SafeAreaView style={styles.safeAreaView}>
-        <ScrollView style={styles.scrollView}>
+        <ScrollView style={styles.scrollView}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+            />
+          }
+        >
           <View style={styles.container}>
             <Text style={styles.font}>Data Mahasiswa</Text>
             <View>
               {users.map((user) => {
                 return(
                   <View style={[styles.data,{backgroundColor: 'hsl(' + (Math.floor(Math.random() * 360)) + ',80%,90%)'}]}>
-                    <Text>{user.nama}</Text>
-                    <Text>{user.nim}</Text>
+                    <View>
+                      <Text style={styles.labelNama}>{user.Document}</Text>
+                      <Text style={styles.labelNama}>{user.nama}</Text>
+                      <Text style={styles.labelNim}>{user.nim}</Text>
                     </View>
+                    <View style={styles.iconPack}>
+                      <Image style={styles.edit} source={require('./src/icon/edit.png')} />
+                      <TouchableOpacity onPress={() => Alert.alert(user.Document)}>
+                        <Image style={styles.delete} source={require('./src/icon/trash.png')} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 );
               })}
             </View>
@@ -116,10 +149,19 @@ const styles = StyleSheet.create({
     marginVertical: 30
   },
   data: {
+    flex: 1,
+    flexDirection: 'row',
     margin: 10,
     marginHorizontal: 20,
     padding: 15,
     borderRadius: 10
+  },
+  labelNama: {
+    fontSize: 20,
+    color: 'black'
+  },
+  labelNim: {
+    color: '#808080'
   },
   fab: {
     position: 'absolute',
@@ -163,6 +205,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  iconPack: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center'
+  },
+  edit: {
+    width: 30,
+    height: 30,
+    marginRight: 10
+  },
+  delete: {
+    width: 30,
+    height: 30
+  }
   })
 
 export default App;
