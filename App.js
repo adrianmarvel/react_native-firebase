@@ -4,7 +4,7 @@ import { render } from 'react-dom';
 import { Alert, TouchableOpacity, StyleSheet, Text, View, SafeAreaView, ScrollView, Modal, Pressable, TextInput, Button, RefreshControl, Image } from 'react-native';
 import { FAB } from 'react-native-paper';
 import { db } from './firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
 const wait = (timeout) => {
   return new Promise(resolve => setTimeout(resolve, timeout));
@@ -13,17 +13,21 @@ const wait = (timeout) => {
 function App(){
   const [namaBaru, setNamaBaru] = useState("");
   const [nimBaru, setNimBaru] = useState("");
+  const [editNama, setNama] = useState("");
+  const [editNim, setNim] = useState("");
+  const [editId, setId] = useState("");
   const [users, setUsers] = useState([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const usersCollectionRef = collection(db, "mahasiswa");
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible1, setModalVisible1] = useState(false);
+  const [modalVisible2, setModalVisible2] = useState(false);
   var modalBackgroundStyle = {
     backgroundColor: 'rgba(0, 0, 0, 0.5)'
   };
 
   const klikSimpan = async () => {
     await addDoc(usersCollectionRef, { nama: namaBaru, nim: nimBaru});
-    setModalVisible(false);
+    setModalVisible1(false);
     const data = await getDocs(usersCollectionRef);
     setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
   };
@@ -31,7 +35,26 @@ function App(){
   const deleteUser = async (id) => {
     const userDoc = doc(db, "mahasiswa", id);
     await deleteDoc(userDoc);
+    const data = await getDocs(usersCollectionRef);
+    setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
   };
+
+  const editUser = async (id, nama, nim) => {
+    setModalVisible2(true);
+    {setNama(nama)};
+    {setNim(nim)};
+    {console.log(setNama, setNim)};
+  }
+
+  const updateUser = async (Id, nama, nim) => {
+    const userDoc = doc(db, "mahasiswa", Id)
+    const field1 = { nama : editNama};
+    const field2 = { nim : editNim};
+    await updateDoc(userDoc, field1, field2);
+    setModalVisible2(false);
+    const data = await getDocs(usersCollectionRef);
+    setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
+  }
 
   useEffect(() => {
     const getUsers = async () => {
@@ -65,16 +88,56 @@ function App(){
                 return(
                   <View style={[styles.data,{backgroundColor: 'hsl(' + (Math.floor(Math.random() * 360)) + ',80%,90%)'}]}>
                     <View>
-                      <Text style={styles.labelNama}>{user.Document}</Text>
                       <Text style={styles.labelNama}>{user.nama}</Text>
                       <Text style={styles.labelNim}>{user.nim}</Text>
                     </View>
                     <View style={styles.iconPack}>
-                      <Image style={styles.edit} source={require('./src/icon/edit.png')} />
-                      <TouchableOpacity onPress={() => Alert.alert(user.Document)}>
+                      <TouchableOpacity onPress={() =>  editUser(user.Id, user.nama, user.nim)}>
+                        <Image style={styles.edit} source={require('./src/icon/edit.png')} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => deleteUser(user.Id)}>
                         <Image style={styles.delete} source={require('./src/icon/trash.png')} />
                       </TouchableOpacity>
                     </View>
+                    <Modal
+                      animationType="fade"
+                      transparent={true}
+                      visible={modalVisible2}
+                      onRequestClose={() => {
+                        Alert.alert("Modal has been closed.");
+                        setModalVisible1(!modalVisible);
+                      }}
+                    >
+                      <View style={[styles.centeredView,modalBackgroundStyle]}>
+                        <View style={styles.modalView}>
+                        <Text style={styles.titleModal}>Edit data mahasiswa</Text>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="Nama"
+                            value={editNama}
+                            onChangeText={setNama}
+                          />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="NIM"
+                            value={editNim}
+                            keyboardType="numeric"
+                            onChangeText={setNim}
+                          />
+                          <View style={styles.fixToText}>
+                            <Button
+                              title="Batal"
+                              color="red"
+                              onPress={() => setModalVisible2(false)}
+                            />
+                            <Button
+                              title="Update"
+                              onPress={() =>  updateUser(user.Id, user.nama, user.nim)}
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    </Modal>
                   </View>
                 );
               })}
@@ -85,10 +148,10 @@ function App(){
             <Modal
             animationType="fade"
             transparent={true}
-            visible={modalVisible}
+            visible={modalVisible1}
             onRequestClose={() => {
               Alert.alert("Modal has been closed.");
-              setModalVisible(!modalVisible);
+              setModalVisible1(!modalVisible);
             }}
           >
               <View style={[styles.centeredView,modalBackgroundStyle]}>
@@ -109,7 +172,7 @@ function App(){
                     <Button
                       title="Batal"
                       color="red"
-                      onPress={() => setModalVisible(false)}
+                      onPress={() => setModalVisible1(false)}
                     />
                     <Button
                       title="Simpan"
@@ -126,7 +189,7 @@ function App(){
                 medium
                 icon="plus"
                 color="white"
-                onPress={() =>  setModalVisible(true)}
+                onPress={() =>  setModalVisible1(true)}
               />
             </View>
       </SafeAreaView>
