@@ -4,7 +4,7 @@ import { render } from 'react-dom';
 import { Alert, TouchableOpacity, StyleSheet, Text, View, SafeAreaView, ScrollView, Modal, Pressable, TextInput, Button, RefreshControl, Image } from 'react-native';
 import { FAB } from 'react-native-paper';
 import { db } from './firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, runTransaction } from 'firebase/firestore';
 
 const wait = (timeout) => {
   return new Promise(resolve => setTimeout(resolve, timeout));
@@ -15,7 +15,8 @@ function App(){
   const [nimBaru, setNimBaru] = useState("");
   const [editNama, setNama] = useState("");
   const [editNim, setNim] = useState("");
-  const [editId, setId] = useState("");
+  const [editId, setId] = useState("")
+  const [editDoc, setDoc] = useState("");
   const [users, setUsers] = useState([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const usersCollectionRef = collection(db, "mahasiswa");
@@ -39,8 +40,10 @@ function App(){
     setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
   };
 
-  const editUser = async (id, nama, nim) => {
+  const editUser = async (Id, nama, nim) => {
     setModalVisible2(true);
+    {setDoc(doc(db, "mahasiswa", Id))}
+    {setId(Id)}
     {setNama(nama)};
     {setNim(nim)};
     {console.log(setNama, setNim)};
@@ -48,9 +51,8 @@ function App(){
 
   const updateUser = async (Id, nama, nim) => {
     const userDoc = doc(db, "mahasiswa", Id)
-    const field1 = { nama : editNama};
-    const field2 = { nim : editNim};
-    await updateDoc(userDoc, field1, field2);
+    const field = { nama : editNama, nim : editNim};
+    await updateDoc(editDoc, field);
     setModalVisible2(false);
     const data = await getDocs(usersCollectionRef);
     setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
@@ -99,45 +101,6 @@ function App(){
                         <Image style={styles.delete} source={require('./src/icon/trash.png')} />
                       </TouchableOpacity>
                     </View>
-                    <Modal
-                      animationType="fade"
-                      transparent={true}
-                      visible={modalVisible2}
-                      onRequestClose={() => {
-                        Alert.alert("Modal has been closed.");
-                        setModalVisible1(!modalVisible);
-                      }}
-                    >
-                      <View style={[styles.centeredView,modalBackgroundStyle]}>
-                        <View style={styles.modalView}>
-                        <Text style={styles.titleModal}>Edit data mahasiswa</Text>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Nama"
-                            value={editNama}
-                            onChangeText={setNama}
-                          />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="NIM"
-                            value={editNim}
-                            keyboardType="numeric"
-                            onChangeText={setNim}
-                          />
-                          <View style={styles.fixToText}>
-                            <Button
-                              title="Batal"
-                              color="red"
-                              onPress={() => setModalVisible2(false)}
-                            />
-                            <Button
-                              title="Update"
-                              onPress={() =>  updateUser(user.Id, user.nama, user.nim)}
-                            />
-                          </View>
-                        </View>
-                      </View>
-                    </Modal>
                   </View>
                 );
               })}
@@ -182,6 +145,45 @@ function App(){
                 </View>
               </View>
             </Modal>
+            <Modal
+                      animationType="fade"
+                      transparent={true}
+                      visible={modalVisible2}
+                      onRequestClose={() => {
+                        Alert.alert("Modal has been closed.");
+                        setModalVisible2(!modalVisible2);
+                      }}
+                    >
+                      <View style={[styles.centeredView,modalBackgroundStyle]}>
+                        <View style={styles.modalView}>
+                        <Text style={styles.titleModal}>Edit data mahasiswa</Text>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="Nama"
+                            value={editNama}
+                            onChangeText={setNama}
+                          />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="NIM"
+                            value={editNim}
+                            keyboardType="numeric"
+                            onChangeText={setNim}
+                          />
+                          <View style={styles.fixToText}>
+                            <Button
+                              title="Batal"
+                              color="red"
+                              onPress={() => setModalVisible2(false)}
+                            />
+                            <Button
+                              title="Update"
+                              onPress={() => {updateUser(editNama, editNim)}}
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    </Modal>
           </View>
           <View>
               <FAB
