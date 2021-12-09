@@ -13,12 +13,9 @@ const wait = (timeout) => {
 function App(){
   const [namaBaru, setNamaBaru] = useState("");
   const [nimBaru, setNimBaru] = useState("");
-  const [editNama, setNama] = useState("");
-  const [editNim, setNim] = useState("");
   const [editId, setId] = useState("")
   const [editDoc, setDoc] = useState("");
   const [users, setUsers] = useState([]);
-  const [refreshing, setRefreshing] = React.useState(false);
   const usersCollectionRef = collection(db, "mahasiswa");
   const [modalVisible1, setModalVisible1] = useState(false);
   const [modalVisible2, setModalVisible2] = useState(false);
@@ -29,60 +26,56 @@ function App(){
   const klikSimpan = async () => {
     await addDoc(usersCollectionRef, { nama: namaBaru, nim: nimBaru});
     setModalVisible1(false);
+    getUsers();
+    /*
     const data = await getDocs(usersCollectionRef);
     setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
+    */
   };
 
   const deleteUser = async (id) => {
     const userDoc = doc(db, "mahasiswa", id);
     await deleteDoc(userDoc);
+    getUsers();
+    /*
     const data = await getDocs(usersCollectionRef);
     setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
+    */
   };
 
   const editUser = async (Id, nama, nim) => {
     setModalVisible2(true);
     {setDoc(doc(db, "mahasiswa", Id))}
     {setId(Id)}
-    {setNama(nama)};
-    {setNim(nim)};
-    {console.log(setNama, setNim)};
+    {setNamaBaru(nama)};
+    {setNimBaru(nim)};
   }
 
   const updateUser = async (Id, nama, nim) => {
     const userDoc = doc(db, "mahasiswa", Id)
-    const field = { nama : editNama, nim : editNim};
+    const field = { nama : namaBaru, nim : nimBaru};
     await updateDoc(editDoc, field);
     setModalVisible2(false);
+    getUsers();
+    /*
     const data = await getDocs(usersCollectionRef);
     setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
+    */
   }
 
   useEffect(() => {
-    const getUsers = async () => {
+    getUsers();
+  }, []);
+
+  const getUsers = async () => {
       const data = await getDocs(usersCollectionRef);
       setUsers(data.docs.map((doc) => ({ ...doc.data(), Id:doc.id})));
     };
 
-    getUsers();
-  }, []);
-
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    wait(2000).then(() => setRefreshing(false));
-  }, []);
-
 
   return(
      <SafeAreaView style={styles.safeAreaView}>
-        <ScrollView style={styles.scrollView}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-            />
-          }
-        >
+        <ScrollView style={styles.scrollView}>
           <View style={styles.container}>
             <Text style={styles.font}>Data Mahasiswa</Text>
             <View>
@@ -146,44 +139,44 @@ function App(){
               </View>
             </Modal>
             <Modal
-                      animationType="fade"
-                      transparent={true}
-                      visible={modalVisible2}
-                      onRequestClose={() => {
-                        Alert.alert("Modal has been closed.");
-                        setModalVisible2(!modalVisible2);
-                      }}
-                    >
-                      <View style={[styles.centeredView,modalBackgroundStyle]}>
-                        <View style={styles.modalView}>
-                        <Text style={styles.titleModal}>Edit data mahasiswa</Text>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Nama"
-                            value={editNama}
-                            onChangeText={setNama}
-                          />
-                          <TextInput
-                            style={styles.input}
-                            placeholder="NIM"
-                            value={editNim}
-                            keyboardType="numeric"
-                            onChangeText={setNim}
-                          />
-                          <View style={styles.fixToText}>
-                            <Button
-                              title="Batal"
-                              color="red"
-                              onPress={() => setModalVisible2(false)}
-                            />
-                            <Button
-                              title="Update"
-                              onPress={() => {updateUser(editNama, editNim)}}
-                            />
-                          </View>
-                        </View>
-                      </View>
-                    </Modal>
+              animationType="fade"
+              transparent={true}
+              visible={modalVisible2}
+              onRequestClose={() => {
+                Alert.alert("Modal has been closed.");
+                setModalVisible2(!modalVisible2);
+               }}
+            >
+              <View style={[styles.centeredView,modalBackgroundStyle]}>
+                <View style={styles.modalView}>
+                  <Text style={styles.titleModal}>Edit data mahasiswa</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Nama"
+                    value={namaBaru}
+                    onChangeText={setNamaBaru}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="NIM"
+                    value={nimBaru}
+                    keyboardType="numeric"
+                    onChangeText={setNimBaru}
+                  />
+                  <View style={styles.fixToText}>
+                    <Button
+                      title="Batal"
+                      color="red"
+                      onPress={() => setModalVisible2(false)}
+                    />
+                    <Button
+                      title="Update"
+                      onPress={() => {updateUser(namaBaru, nimBaru)}}
+                    />
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </View>
           <View>
               <FAB
